@@ -21,6 +21,7 @@ var _ io.WriteCloser = (*TimeWriter)(nil)
 const (
 	compressSuffix = ".gz"
 	timeFormat     = "2006-01-02 15:04:05"
+	TimerWaitSecond=2 //1200
 )
 
 type TimeWriter struct {
@@ -33,8 +34,41 @@ type TimeWriter struct {
 	mu          sync.Mutex
 	startMill   sync.Once
 	millCh      chan bool
+	TimerStatus  int
 }
+func (l *TimeWriter)Init() {
+	l.TimerStatus=0
+	dur:=time.Duration(TimerWaitSecond*time.Second)
+	time.AfterFunc(dur,l.TimerFunc)
+}
+func (l *TimeWriter)TimerFunc() {
 
+	tmCur:=time.Now()
+	hour:=tmCur.Hour()
+	min:=tmCur.Minute()
+	if 0==hour {
+		if min<10 {
+			if 0==l.TimerStatus {
+				if l.curFilename != l.filename() {
+					l.rotate()
+				}
+				l.TimerStatus=1
+			}
+		}else if min<25 {
+			if 2!=l.TimerStatus {
+				//删除过期文件,压缩旧文件
+				l.mill()
+				l.TimerStatus=2
+			}
+		}
+	}else {
+		if 0!=l.TimerStatus {
+			l.TimerStatus=0
+		}
+	}
+	dur:=time.Duration(TimerWaitSecond*time.Second)
+	time.AfterFunc(dur,l.TimerFunc)
+}
 func (l *TimeWriter) Write(p []byte) (n int, err error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -45,10 +79,10 @@ func (l *TimeWriter) Write(p []byte) (n int, err error) {
 			return 0, err
 		}
 	}
-
-	if l.curFilename != l.filename() {
-		l.rotate()
-	}
+    //删除
+	//if l.curFilename != l.filename() {
+	//	l.rotate()
+	//}
 
 	n, err = l.file.Write(p)
 
@@ -84,7 +118,7 @@ func (l *TimeWriter) rotate() error {
 		return err
 	}
 
-	l.mill()
+	//l.mill()
 	return nil
 }
 
@@ -212,6 +246,7 @@ func (l *TimeWriter) millRunOnce() error {
 
 	return err
 }
+
 
 func (l *TimeWriter) millRun() {
 	for _ = range l.millCh {

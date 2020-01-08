@@ -1,6 +1,20 @@
 # TimeWriter
 
-TimeWriter implements io.Writer to roll daily and comporess log file time
+TimeWriter implements io.Writer to roll daily and compress log file time
+
+# Version
+
+2020-01-12
+
+​    1. use independent coroutines to process
+
+​    1.1 the names of  daily  log file
+
+​    1.2 compress log file
+
+​    1.3  delete expired  log file
+
+   2.delay compressed history file for easy reading by other programs
 
 ## Overview
 
